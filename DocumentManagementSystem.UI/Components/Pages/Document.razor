@@ -1,0 +1,50 @@
+﻿@page "/document"
+@attribute [StreamRendering]
+
+<PageTitle>Document</PageTitle>
+
+<h1>Document</h1>
+
+<p>This component demonstrates showing data.</p>
+
+@if (documents == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var document in documents)
+            {
+                <tr>
+                    <td>@document.Id</td>
+                    <td>@document.Title</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private DocumentModel[]? documents;
+
+    protected override async Task OnInitializedAsync()
+    {
+        //API call
+        using var client = new HttpClient { BaseAddress = new Uri("http://localhost:8081/") };
+        documents = await client.GetFromJsonAsync<DocumentModel[]>("documents");
+    }
+
+    private class DocumentModel
+    {
+        public Guid Id { get; set; }
+        public string? Title { get; set; }
+    }
+}
