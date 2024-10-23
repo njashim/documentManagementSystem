@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  webapi:
+    build:
+      context: DocumentManagementSystem.API/
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
