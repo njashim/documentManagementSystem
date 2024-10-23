@@ -1,9 +1,9 @@
-﻿@page "/document"
+﻿@page "/documents"
 @attribute [StreamRendering]
 
-<PageTitle>Document</PageTitle>
+<PageTitle>Documents</PageTitle>
 
-<h1>Document</h1>
+<h1>Documents</h1>
 
 <p>This component demonstrates showing data.</p>
 
@@ -33,16 +33,16 @@ else
 }
 
 @code {
-    private DocumentModel[]? documents;
+    private Document[]? documents;
 
     protected override async Task OnInitializedAsync()
     {
         //API call
         using var client = new HttpClient { BaseAddress = new Uri("http://localhost:8081/") };
-        documents = await client.GetFromJsonAsync<DocumentModel[]>("documents");
+        documents = await client.GetFromJsonAsync<Document[]>("documents");
     }
 
-    private class DocumentModel
+    private class Document
     {
         public Guid Id { get; set; }
         public string? Title { get; set; }
