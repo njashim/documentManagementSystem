@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  webapi:
+  dms_api:
     build:
       context: DocumentManagementSystem.API/
       dockerfile: Dockerfile
