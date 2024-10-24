@@ -27,6 +27,7 @@ namespace DocumentManagementSystem.API
 
             app.UseAuthorization();
 
+            app.MapGet("/", () => Results.Ok("some hardcoded data"));
 
             app.MapControllers();
 
