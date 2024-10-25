@@ -1,6 +1,8 @@
 ﻿@page "/documents"
 @attribute [StreamRendering]
 
+@inject IConfiguration Configuration
+
 <PageTitle>Documents</PageTitle>
 
 <h1>Documents</h1>
@@ -37,9 +39,16 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        //API call
-        using var client = new HttpClient { BaseAddress = new Uri("http://localhost:8081/") };
+        // Retrieve the API base URL from appsettings.json
+        string apiBaseUrl = Configuration["ApiSettings:ApiBaseUrl"];
+
+        //API call using the URL from appsettings.json
+        using var client = new HttpClient { BaseAddress = new Uri(apiBaseUrl) };
         documents = await client.GetFromJsonAsync<Document[]>("documents");
+
+        //API call
+        // using var client = new HttpClient { BaseAddress = new Uri("http://localhost:8081/") };
+        // documents = await client.GetFromJsonAsync<Document[]>("documents");
     }
 
     private class Document
