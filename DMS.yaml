@@ -28,7 +28,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/NewDocument'
+              $ref: '#/components/schemas/Document'
       responses:
         '201':
           description: Document created
@@ -70,7 +70,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateDocument'
+              $ref: '#/components/schemas/Document'
       responses:
         '200':
           description: Document updated
@@ -102,34 +102,6 @@ components:
         id:
           type: string
           description: Unique identifier of the document
-        name:
+        title:
           type: string
           description: Name of the document
-        size:
-          type: integer
-          description: Size of the document in bytes
-        uploadedAt:
-          type: string
-          format: date-time
-          description: The date and time when the document was uploaded
-    NewDocument:
-      type: object
-      properties:
-        name:
-          type: string
-          description: Name of the document
-        content:
-          type: string
-          format: binary
-          description: The content of the document (binary data)
-      required:
-        - name
-        - content
-    UpdateDocument:
-      type: object
-      properties:
-        name:
-          type: string
-          description: Updated name of the document
-      required:
-        - name
