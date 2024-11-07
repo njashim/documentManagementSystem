@@ -39,16 +39,12 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        // Retrieve the API base URL from appsettings.json
+        // Retrieve the API base URL from appsettings.Development.json or appsettings.Docker.json
         string apiBaseUrl = Configuration["ApiSettings:ApiBaseUrl"];
 
-        //API call using the URL from appsettings.json
+        // API call using the URL from appsettings.Development.json or appsettings.Docker.json
         using var client = new HttpClient { BaseAddress = new Uri(apiBaseUrl) };
         documents = await client.GetFromJsonAsync<Document[]>("documents");
-
-        //API call
-        // using var client = new HttpClient { BaseAddress = new Uri("http://localhost:8081/") };
-        // documents = await client.GetFromJsonAsync<Document[]>("documents");
     }
 
     private class Document
