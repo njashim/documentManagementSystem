@@ -18,10 +18,10 @@ namespace DocumentManagementSystem.API.Controllers
         [HttpGet]
         public IActionResult GetDocuments()
         {
-            var documents = new List<Document>
+            var documents = new List<DocumentModel>
             {
-                new Document { Id = Guid.NewGuid(), Title = "Sample Document 1" },
-                new Document { Id = Guid.NewGuid(), Title = "Sample Document 2" }
+                new DocumentModel { Id = Guid.NewGuid(), Title = "Sample Document 1" },
+                new DocumentModel { Id = Guid.NewGuid(), Title = "Sample Document 2" }
             };
 
             return Ok(documents);
@@ -31,7 +31,7 @@ namespace DocumentManagementSystem.API.Controllers
         [HttpGet("{documentId}")]
         public IActionResult GetDocumentById(Guid documentId)
         {
-            var document = new Document
+            var document = new DocumentModel
             {
                 Id = documentId,
                 Title = "Sample Document"
@@ -42,9 +42,9 @@ namespace DocumentManagementSystem.API.Controllers
 
         //POST/documents
         [HttpPost]
-        public IActionResult UploadDocument([FromBody] Document newDocument)
+        public IActionResult UploadDocument([FromBody] DocumentModel newDocument)
         {
-            var createdDocument = new Document
+            var createdDocument = new DocumentModel
             {
                 Id = Guid.NewGuid(),
                 Title = newDocument.Title
@@ -55,9 +55,9 @@ namespace DocumentManagementSystem.API.Controllers
 
         //PUT/documents/{documentId}
         [HttpPut("{documentId}")]
-        public IActionResult UpdateDocument(Guid documentId, [FromBody] Document updateDocument)
+        public IActionResult UpdateDocument(Guid documentId, [FromBody] DocumentModel updateDocument)
         {
-            var updatedDocument = new Document
+            var updatedDocument = new DocumentModel
             {
                 Id = documentId,
                 Title = updateDocument.Title

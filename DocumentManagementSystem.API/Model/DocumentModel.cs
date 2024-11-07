@@ -1,6 +1,6 @@
 namespace DocumentManagementSystem.API.Model
 {
-    public class Document
+    public class DocumentModel
     {
         public Guid Id { get; set; } = Guid.NewGuid();
 
