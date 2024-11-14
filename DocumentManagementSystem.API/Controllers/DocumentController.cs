@@ -1,5 +1,6 @@
-using DocumentManagementSystem.API.Model;
+using Model;
 using Microsoft.AspNetCore.Mvc;
+using BusinessLayer.Service.Interface;
 
 namespace DocumentManagementSystem.API.Controllers
 {
@@ -7,69 +8,77 @@ namespace DocumentManagementSystem.API.Controllers
     [Route("documents/")]
     public class DocumentController : ControllerBase
     {
+        private readonly IDocumentService _documentService;
         private readonly ILogger<DocumentController> _logger;
 
-        public DocumentController(ILogger<DocumentController> logger)
+        public DocumentController(IDocumentService documentService, ILogger<DocumentController> logger)
         {
+            _documentService = documentService;
             _logger = logger;
         }
 
         //GET/documents
         [HttpGet]
-        public IActionResult GetDocuments()
+        public async Task<IActionResult> GetDocuments()
         {
-            var documents = new List<DocumentModel>
-            {
-                new DocumentModel { Id = Guid.NewGuid(), Title = "Sample Document 1" },
-                new DocumentModel { Id = Guid.NewGuid(), Title = "Sample Document 2" }
-            };
+            var documents = await _documentService.GetDocumentsAsync();
 
             return Ok(documents);
         }
 
         //GET/documents/{documentId}
         [HttpGet("{documentId}")]
-        public IActionResult GetDocumentById(Guid documentId)
+        public async Task<IActionResult> GetDocumentById(Guid documentId)
         {
-            var document = new DocumentModel
+            var document = await _documentService.GetDocumentByIdAsync(documentId);
+
+            if (document == null)
             {
-                Id = documentId,
-                Title = "Sample Document"
-            };
+                return NotFound($"Document with ID {documentId} not found.");
+            }
 
             return Ok(document);
         }
 
         //POST/documents
         [HttpPost]
-        public IActionResult UploadDocument([FromBody] DocumentModel newDocument)
+        public async Task<IActionResult> UploadDocument([FromBody] DocumentModel newDocumentModel)
         {
-            var createdDocument = new DocumentModel
+            if (newDocumentModel == null)
             {
-                Id = Guid.NewGuid(),
-                Title = newDocument.Title
-            };
+                return BadRequest("Document data is null.");
+            }
 
-            return CreatedAtAction(nameof(GetDocumentById), new { documentId = createdDocument.Id }, createdDocument);
+            await _documentService.AddDocumentAsync(newDocumentModel);
+
+            return CreatedAtAction(nameof(GetDocumentById), new { documentModelId = newDocumentModel.Id }, newDocumentModel);
         }
 
         //PUT/documents/{documentId}
         [HttpPut("{documentId}")]
-        public IActionResult UpdateDocument(Guid documentId, [FromBody] DocumentModel updateDocument)
+        public async Task<IActionResult> UpdateDocument(Guid documentId, [FromBody] DocumentModel updatedDocumentModel)
         {
-            var updatedDocument = new DocumentModel
+            if (updatedDocumentModel == null || documentId != updatedDocumentModel.Id)
             {
-                Id = documentId,
-                Title = updateDocument.Title
-            };
+                return BadRequest("Document data is invalid.");
+            }
 
-            return Ok(updatedDocument);
+            try
+            {
+                await _documentService.UpdateDocumentAsync(updatedDocumentModel);
+                return NoContent();
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound($"Document with ID {documentId} not found.");
+            }
         }
 
         //DELETE/documents/{documentId}
         [HttpDelete("{documentId}")]
-        public IActionResult DeleteDocument(Guid documentId)
+        public async Task<IActionResult> DeleteDocument(Guid documentId)
         {
+            await _documentService.DeleteDocumentAsync(documentId);
             return NoContent();
         }
     }
