@@ -1,3 +1,9 @@
+using BusinessLayer.Service.Interface;
+using BusinessLayer.Service;
+using DataAccessLayer.Entity.Context;
+using DataAccessLayer.Repository.Interface;
+using DataAccessLayer.Repository;
+using BusinessLayer.Mapping;
 
 namespace DocumentManagementSystem.API
 {
@@ -13,6 +19,13 @@ namespace DocumentManagementSystem.API
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
+
+            builder.Services.AddDbContext<DMSContext>();
+
+            builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
+            builder.Services.AddScoped<IDocumentService, DocumentService>();
+
+            builder.Services.AddAutoMapper(typeof(MappingProfile));
 
             var app = builder.Build();
 
