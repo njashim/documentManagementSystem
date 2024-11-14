@@ -19,7 +19,7 @@ else
         <thead>
             <tr>
                 <th>ID</th>
-                <th>Title</th>
+                <th>Name</th>
             </tr>
         </thead>
         <tbody>
@@ -27,7 +27,7 @@ else
             {
                 <tr>
                     <td>@document.Id</td>
-                    <td>@document.Title</td>
+                    <td>@document.Name</td>
                 </tr>
             }
         </tbody>
@@ -50,6 +50,6 @@ else
     private class Document
     {
         public Guid Id { get; set; }
-        public string? Title { get; set; }
+        public string Name { get; set; }
     }
 }
