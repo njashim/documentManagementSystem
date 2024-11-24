@@ -10,15 +10,18 @@ namespace DataAccessLayer.Entity.Context
         public DMSContext(DbContextOptions dbContextOptions, IConfiguration configuration) : base(dbContextOptions)
         {
             _configuration = configuration;
-            Database.Migrate();
+            //Database.Migrate();
         }
 
         public DbSet<Document> Documents { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseNpgsql(_configuration.GetConnectionString("DMSDBConnection"));
-            optionsBuilder.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+            if (!optionsBuilder.IsConfigured)
+            {
+                optionsBuilder.UseNpgsql(_configuration.GetConnectionString("DMSDBConnection"));
+                optionsBuilder.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+            }
         }
     }
 }
