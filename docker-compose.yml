@@ -15,18 +15,18 @@ services:
     depends_on:
       - dms_db
 
-#  dms_ui:
-#    build:
-#      context: DocumentManagementSystem/UI
-#      dockerfile: Dockerfile
-#    ports:
-#      - "80:80"
-#    environment:
-#      - ASPNETCORE_ENVIRONMENT=Docker
-#    networks:
-#      - app-network
-#    depends_on:
-#      - dms_api
+  dms_ui:
+    build:
+      context: DocumentManagementSystem/UI
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
+    networks:
+      - app-network
+    depends_on:
+      - dms_api
   
   dms_db:
     image: postgres:latest

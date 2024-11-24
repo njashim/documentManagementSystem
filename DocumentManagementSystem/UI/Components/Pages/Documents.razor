@@ -1,0 +1,55 @@
+﻿@page "/documents"
+@attribute [StreamRendering]
+
+@inject IConfiguration Configuration
+
+<PageTitle>Documents</PageTitle>
+
+<h1>Documents</h1>
+
+<p>This component demonstrates showing data.</p>
+
+@if (documents == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var document in documents)
+            {
+                <tr>
+                    <td>@document.Id</td>
+                    <td>@document.Name</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private Document[]? documents;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Retrieve the API base URL from appsettings.Development.json or appsettings.Docker.json
+        string apiBaseUrl = Configuration["ApiSettings:ApiBaseUrl"];
+
+        // API call using the URL from appsettings.Development.json or appsettings.Docker.json
+        using var client = new HttpClient { BaseAddress = new Uri(apiBaseUrl) };
+        documents = await client.GetFromJsonAsync<Document[]>("documents");
+    }
+
+    private class Document
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; }
+    }
+}
