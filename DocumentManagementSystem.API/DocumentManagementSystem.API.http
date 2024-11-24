@@ -1,6 +1,0 @@
-@DocumentManagementSystem.API_HostAddress = http://localhost:5248
-
-GET {{DocumentManagementSystem.API_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
