@@ -114,5 +114,81 @@ namespace BusinessLayer.Tests
                 Assert.That(documents[i].Name, Is.EqualTo(documentModels[i].Name));
             }
         }
+
+        [Test]
+        public void Should_Map_Empty_List()
+        {
+            var documents = new List<Document>();
+
+            var documentModels = _mapper.Map<List<DocumentModel>>(documents);
+
+            Assert.That(documentModels, Is.Empty);
+        }
+
+        [Test]
+        public void Should_Map_List_With_Null_Element()
+        {
+            var documents = new List<Document>
+            {
+                new Document { Id = Guid.NewGuid(), Name = "Valid Document" },
+                null
+            };
+
+            var documentModels = _mapper.Map<List<DocumentModel>>(documents);
+
+            Assert.That(documentModels.Count, Is.EqualTo(2));
+            Assert.That(documentModels[0].Id, Is.Not.EqualTo(Guid.Empty));
+            Assert.That(documentModels[1], Is.Null);
+        }
+
+        [Test]
+        public void Should_Map_Null_Document_To_Null_DocumentModel()
+        {
+            Document document = null;
+
+            var documentModel = _mapper.Map<DocumentModel>(document);
+
+            Assert.That(documentModel, Is.Null);
+        }
+
+        [Test]
+        public void Should_Map_Null_DocumentModel_To_Null_Document()
+        {
+            DocumentModel documentModel = null;
+
+            var document = _mapper.Map<Document>(documentModel);
+
+            Assert.That(document, Is.Null);
+        }
+
+        [Test]
+        public void Should_Handle_Null_Properties()
+        {
+            var document = new Document
+            {
+                Id = Guid.NewGuid(),
+                Name = null
+            };
+
+            var documentModel = _mapper.Map<DocumentModel>(document);
+
+            Assert.That(documentModel.Name, Is.Null);
+        }
+
+        [Test]
+        public void Should_Map_Back_And_Forth()
+        {
+            var document = new Document
+            {
+                Id = Guid.NewGuid(),
+                Name = "Test Document"
+            };
+
+            var documentModel = _mapper.Map<DocumentModel>(document);
+            var mappedBackDocument = _mapper.Map<Document>(documentModel);
+
+            Assert.That(mappedBackDocument.Id, Is.EqualTo(document.Id));
+            Assert.That(mappedBackDocument.Name, Is.EqualTo(document.Name));
+        }
     }
 }
