@@ -5,6 +5,7 @@ using BusinessLayer.Service;
 using DataAccessLayer.Entity.Context;
 using DataAccessLayer.Repository.Interface;
 using DataAccessLayer.Repository;
+using Microsoft.EntityFrameworkCore;
 
 namespace API
 {
@@ -29,6 +30,13 @@ namespace API
             builder.Services.AddAutoMapper(typeof(MappingProfile));
 
             var app = builder.Build();
+
+            // Apply migrations during application startup
+            using (var scope = app.Services.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<DMSContext>();
+                dbContext.Database.Migrate();
+            }
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())

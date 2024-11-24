@@ -6,14 +6,14 @@ COPY ["DocumentManagementSystem/BusinessLayer/BusinessLayer.csproj", "BusinessLa
 COPY ["DocumentManagementSystem/DataAccessLayer/DataAccessLayer.csproj", "DataAccessLayer/"]
 COPY ["DocumentManagementSystem/Model/Model.csproj", "Model/"]
 
-RUN dotnet restore
+RUN dotnet restore API/API.csproj
 
 COPY DocumentManagementSystem/API ./API/
 COPY DocumentManagementSystem/BusinessLayer ./BusinessLayer/
 COPY DocumentManagementSystem/DataAccessLayer ./DataAccessLayer/
 COPY DocumentManagementSystem/Model ./Model/
 
-RUN dotnet publish -c Release -o /out
+RUN dotnet publish API/API.csproj -c Release -o /out
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
