@@ -28,9 +28,27 @@ else
             {
                 <tr>
                     <td>@document.Id</td>
-                    <td>@document.Name</td>
                     <td>
-                        <button class="btn btn-danger" @onclick="() => DeleteDocument(document.Id)">Delete</button>
+                        @if (document.IsEditing)
+                        {
+                            <input type="text" class="form-control" @bind="@document.EditName" />
+                        }
+                        else
+                        {
+                            @document.Name
+                        }
+                    </td>
+                    <td>
+                        @if (document.IsEditing)
+                        {
+                            <button class="btn btn-success" @onclick="() => SaveEdit(document)">Save</button>
+                            <button class="btn btn-secondary" @onclick="() => CancelEdit(document)">Cancel</button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-primary" @onclick="() => EditDocument(document)">Edit</button>
+                            <button class="btn btn-danger" @onclick="() => DeleteDocument(document.Id)">Delete</button>
+                        }
                     </td>
                 </tr>
             }
@@ -89,9 +107,58 @@ else
         }
     }
 
+    private void EditDocument(Document document)
+    {
+        document.IsEditing = true;
+        document.EditName = document.Name;
+    }
+
+    private void CancelEdit(Document document)
+    {
+        document.IsEditing = false;
+        document.EditName = null;
+    }
+
+    private async Task SaveEdit(Document document)
+    {
+        if (string.IsNullOrWhiteSpace(document.EditName))
+        {
+            Console.Error.WriteLine("Der Name darf nicht leer sein.");
+            return;
+        }
+
+        try
+        {
+            // Ändere hier den JSON-Body, damit er der Struktur des DocumentModel entspricht
+            var content = new StringContent(JsonSerializer.Serialize(new { Id = document.Id, Name = document.EditName }), System.Text.Encoding.UTF8, "application/json");
+
+            var apiUrl = $"{ApiBaseUrl}Documents/{document.Id}";
+            var response = await Http.PutAsync(apiUrl, content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                document.Name = document.EditName;
+                document.IsEditing = false;
+                document.EditName = null;
+            }
+            else
+            {
+                var errorDetails = await response.Content.ReadAsStringAsync();
+                Console.Error.WriteLine($"Fehler beim Aktualisieren des Dokuments: {response.ReasonPhrase} - Details: {errorDetails}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Fehler beim Aktualisieren des Dokuments: {ex.Message}");
+        }
+    }
+
+
     private class Document
     {
         public Guid Id { get; set; }
         public string Name { get; set; }
+        public bool IsEditing { get; set; } = false;
+        public string? EditName { get; set; }
     }
 }
