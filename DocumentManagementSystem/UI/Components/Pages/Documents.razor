@@ -56,9 +56,22 @@ else
     </table>
 }
 
+<h3>Add New Document</h3>
+<div>
+    <label for="documentName">Document Name:</label>
+    <input type="text" id="documentName" class="form-control" @bind="newDocumentName" />
+
+    <label for="fileUpload">Upload File:</label>
+    <InputFile id="fileUpload" OnChange="OnFileSelectedAsync" />
+
+    <button class="btn btn-primary" @onclick="SaveNewDocument">Save</button>
+</div>
+
 @code {
     private Document[]? documents;
     private const string ApiBaseUrl = "http://dms_api/";
+    private string newDocumentName = string.Empty;
+    private IBrowserFile? selectedFile;
 
     protected override async Task OnInitializedAsync()
     {
@@ -69,7 +82,7 @@ else
     {
         try
         {
-            var apiUrl = $"{ApiBaseUrl}Documents";
+            var apiUrl = $"{ApiBaseUrl}documents";
             var jsonResponse = await Http.GetStringAsync(apiUrl);
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
@@ -88,7 +101,7 @@ else
     {
         try
         {
-            var apiUrl = $"{ApiBaseUrl}Documents/{documentId}";
+            var apiUrl = $"{ApiBaseUrl}documents/{documentId}";
             var response = await Http.DeleteAsync(apiUrl);
 
             if (response.IsSuccessStatusCode)
@@ -129,10 +142,9 @@ else
 
         try
         {
-            // Ändere hier den JSON-Body, damit er der Struktur des DocumentModel entspricht
             var content = new StringContent(JsonSerializer.Serialize(new { Id = document.Id, Name = document.EditName }), System.Text.Encoding.UTF8, "application/json");
 
-            var apiUrl = $"{ApiBaseUrl}Documents/{document.Id}";
+            var apiUrl = $"{ApiBaseUrl}documents/{document.Id}";
             var response = await Http.PutAsync(apiUrl, content);
 
             if (response.IsSuccessStatusCode)
@@ -153,6 +165,69 @@ else
         }
     }
 
+    private async Task SaveNewDocument()
+    {
+        // Sicherstellen, dass der Name und die Datei ausgewählt sind
+        if (string.IsNullOrWhiteSpace(newDocumentName) || selectedFile == null)
+        {
+            Console.Error.WriteLine("Bitte füllen Sie alle Felder aus.");
+            return;
+        }
+
+        try
+        {
+            // Die Datei in Base64 umwandeln
+            var fileBytes = new byte[selectedFile.Size];
+            await selectedFile.OpenReadStream().ReadAsync(fileBytes);
+            var base64File = Convert.ToBase64String(fileBytes);
+
+            // Das Dokument als JSON erstellen
+            var documentModel = new DocumentModel
+                {
+                    Name = newDocumentName,
+                    FileBase64 = base64File,
+                    FileName = selectedFile.Name
+                };
+
+            // Die POST-Anforderung mit den Dokumentdaten senden
+            var apiUrl = $"{ApiBaseUrl}documents";
+            var jsonContent = new StringContent(JsonSerializer.Serialize(documentModel), System.Text.Encoding.UTF8, "application/json");
+            var response = await Http.PostAsync(apiUrl, jsonContent);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Lade die Dokumente neu, nachdem ein neues Dokument hinzugefügt wurde
+                await LoadDocuments();
+                newDocumentName = string.Empty;
+                selectedFile = null;
+            }
+            else
+            {
+                var errorDetails = await response.Content.ReadAsStringAsync();
+                Console.Error.WriteLine($"Fehler beim Hochladen des Dokuments: {response.ReasonPhrase} - Details: {errorDetails}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Fehler beim Speichern des Dokuments: {ex.Message}");
+        }
+    }
+
+    // Asynchrone Methode für die Dateiauswahl
+    private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        if (file != null)
+        {
+            selectedFile = file;
+            Console.WriteLine($"Datei ausgewählt: {selectedFile.Name}, Größe: {selectedFile.Size}, Typ: {selectedFile.ContentType}");
+        }
+        else
+        {
+            Console.WriteLine("Keine Datei ausgewählt oder ungültiger Dateityp.");
+        }
+    }
 
     private class Document
     {
@@ -160,5 +235,12 @@ else
         public string Name { get; set; }
         public bool IsEditing { get; set; } = false;
         public string? EditName { get; set; }
+    }
+
+    private class DocumentModel
+    {
+        public string Name { get; set; }
+        public string FileBase64 { get; set; }
+        public string FileName { get; set; }
     }
 }

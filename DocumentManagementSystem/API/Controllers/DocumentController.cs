@@ -51,7 +51,8 @@ namespace API.Controllers
 
             await _documentService.AddDocumentAsync(newDocumentModel);
 
-            return CreatedAtAction(nameof(GetDocumentById), new { documentModelId = newDocumentModel.Id }, newDocumentModel);
+            return CreatedAtAction(nameof(GetDocumentById), new { documentId = newDocumentModel.Id }, newDocumentModel);
+
         }
 
         //PUT/documents/{documentId}
