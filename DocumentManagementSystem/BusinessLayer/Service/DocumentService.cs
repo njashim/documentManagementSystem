@@ -45,7 +45,7 @@ namespace BusinessLayer.Service
 
             if (existingDocument != null)
             {
-                existingDocument.Name = updatedDocumentModel.Name;
+                existingDocument.Tags = updatedDocumentModel.Tags;
 
                 await _documentRepository.UpdateDocumentAsync(existingDocument);
             }

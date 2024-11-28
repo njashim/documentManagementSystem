@@ -6,10 +6,10 @@ services:
       context: .
       dockerfile: DocumentManagementSystem/API/Dockerfile
     ports:
-      - "8081:80"
+      - "8081:8081"
     environment:
       - ASPNETCORE_ENVIRONMENT=Docker
-      - ASPNETCORE_URLS=http://+:80 
+      - ASPNETCORE_URLS=http://+:8081 
       - ConnectionStrings__DefaultConnection=Host=dms_db;Port=5432;Username=postgres;Password=postgres;Database=dmsdb
     networks:
       - app-network
@@ -21,11 +21,11 @@ services:
       context: DocumentManagementSystem/UI
       dockerfile: Dockerfile
     ports:
-      - "7000:80"
+      - "80:80"
     environment:
       - ASPNETCORE_ENVIRONMENT=Docker
       - ASPNETCORE_URLS=http://+:80 
-      - API_URL=http://dms_api/
+      - API_URL=http://dms_api:8081/
     networks:
       - app-network
     depends_on:

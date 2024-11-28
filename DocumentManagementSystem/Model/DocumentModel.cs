@@ -6,6 +6,8 @@
 
         public string Name { get; set; }
 
+        public string Tags { get; set; }
+
         //public string Content { get; set; }
 
         //public string? FileName { get; set; }

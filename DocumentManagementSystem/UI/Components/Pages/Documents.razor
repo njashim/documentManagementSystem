@@ -2,8 +2,26 @@
 @using System.Text.Json
 @inject HttpClient Http
 @attribute [StreamRendering]
+@inject IConfiguration Configuration
 
 <PageTitle>Documents</PageTitle>
+
+<style>
+    .input-container {
+        display: flex;
+        align-items: center; /* Zentriert die Elemente vertikal */
+        gap: 10px; /* Abstand zwischen den Elementen */
+    }
+
+        .input-container .form-group {
+            margin-bottom: 0;
+            flex: 1; /* Damit die Eingabefelder flexibel sind */
+        }
+
+        .input-container button {
+            margin-left: 10px; /* Abstand zwischen Button und den Eingabefeldern */
+        }
+</style>
 
 <h1>Documents</h1>
 
@@ -20,6 +38,7 @@ else
             <tr>
                 <th>ID</th>
                 <th>Name</th>
+                <th>Tags</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -28,14 +47,15 @@ else
             {
                 <tr>
                     <td>@document.Id</td>
+                    <td>@document.Name</td>
                     <td>
                         @if (document.IsEditing)
                         {
-                            <input type="text" class="form-control" @bind="@document.EditName" />
+                            <input type="text" class="form-control" @bind="@document.EditTags" />
                         }
                         else
                         {
-                            @document.Name
+                            @document.Tags
                         }
                     </td>
                     <td>
@@ -57,24 +77,27 @@ else
 }
 
 <h3>Add New Document</h3>
-<div>
-    <label for="documentName">Document Name:</label>
-    <input type="text" id="documentName" class="form-control" @bind="newDocumentName" />
-
-    <label for="fileUpload">Upload File:</label>
-    <InputFile id="fileUpload" OnChange="OnFileSelectedAsync" />
-
+<div class="input-container">
+    <div class="form-group">
+        <label for="tagsInput">Tags:</label>
+        <input type="text" id="tagsInput" class="form-control" @bind="newTags" />
+    </div>
+    <div class="form-group">
+        <label for="fileUpload">Upload File:</label>
+        <InputFile id="fileUpload" OnChange="OnFileSelectedAsync" />
+    </div>
     <button class="btn btn-primary" @onclick="SaveNewDocument">Save</button>
 </div>
 
 @code {
     private Document[]? documents;
-    private const string ApiBaseUrl = "http://dms_api/";
-    private string newDocumentName = string.Empty;
+    private string ApiBaseUrl;  // Update with your actual API base URL
     private IBrowserFile? selectedFile;
+    private string newTags = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
+        ApiBaseUrl = Configuration["ApiSettings:ApiBaseUrl"];
         await LoadDocuments();
     }
 
@@ -82,8 +105,9 @@ else
     {
         try
         {
-            var apiUrl = $"{ApiBaseUrl}documents";
+            var apiUrl = $"{ApiBaseUrl}/documents";
             var jsonResponse = await Http.GetStringAsync(apiUrl);
+
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
             using var jsonDoc = JsonDocument.Parse(jsonResponse);
@@ -101,12 +125,11 @@ else
     {
         try
         {
-            var apiUrl = $"{ApiBaseUrl}documents/{documentId}";
+            var apiUrl = $"{ApiBaseUrl}/documents/{documentId}";
             var response = await Http.DeleteAsync(apiUrl);
 
             if (response.IsSuccessStatusCode)
             {
-                // Entferne das gelöschte Dokument aus der Liste
                 documents = documents?.Where(d => d.Id != documentId).ToArray();
             }
             else
@@ -122,36 +145,46 @@ else
 
     private void EditDocument(Document document)
     {
+        // Setze IsEditing für das Dokument, das bearbeitet wird
         document.IsEditing = true;
-        document.EditName = document.Name;
+        document.EditTags = document.Tags;  // Lade den Tag des Dokumentes für Bearbeitung
     }
 
     private void CancelEdit(Document document)
     {
+        // Abbrechen und Editieren zurücksetzen
         document.IsEditing = false;
-        document.EditName = null;
+        document.EditTags = null;
     }
 
     private async Task SaveEdit(Document document)
     {
-        if (string.IsNullOrWhiteSpace(document.EditName))
+        if (string.IsNullOrWhiteSpace(document.EditTags))
         {
-            Console.Error.WriteLine("Der Name darf nicht leer sein.");
+            Console.Error.WriteLine("Tags dürfen nicht leer sein.");
             return;
         }
 
         try
         {
-            var content = new StringContent(JsonSerializer.Serialize(new { Id = document.Id, Name = document.EditName }), System.Text.Encoding.UTF8, "application/json");
+            // JSON-Daten für das Update vorbereiten
+            var content = new StringContent(JsonSerializer.Serialize(new
+            {
+                Id = document.Id,
+                Name = document.Name,  // Name bleibt unverändert
+                Tags = document.EditTags
+            }), System.Text.Encoding.UTF8, "application/json");
 
-            var apiUrl = $"{ApiBaseUrl}documents/{document.Id}";
+            var apiUrl = $"{ApiBaseUrl}/documents/{document.Id}";
             var response = await Http.PutAsync(apiUrl, content);
 
             if (response.IsSuccessStatusCode)
             {
-                document.Name = document.EditName;
+                // Tags nach erfolgreichem Update speichern
+                document.Tags = document.EditTags;
                 document.IsEditing = false;
-                document.EditName = null;
+                document.EditTags = null;
+                await LoadDocuments(); // Dokumente neu laden
             }
             else
             {
@@ -167,38 +200,34 @@ else
 
     private async Task SaveNewDocument()
     {
-        // Sicherstellen, dass der Name und die Datei ausgewählt sind
-        if (string.IsNullOrWhiteSpace(newDocumentName) || selectedFile == null)
+        if (selectedFile == null)
         {
-            Console.Error.WriteLine("Bitte füllen Sie alle Felder aus.");
+            Console.Error.WriteLine("Bitte wählen Sie eine Datei aus.");
             return;
         }
 
         try
         {
-            // Die Datei in Base64 umwandeln
             var fileBytes = new byte[selectedFile.Size];
             await selectedFile.OpenReadStream().ReadAsync(fileBytes);
             var base64File = Convert.ToBase64String(fileBytes);
 
-            // Das Dokument als JSON erstellen
             var documentModel = new DocumentModel
                 {
-                    Name = newDocumentName,
+                    Name = selectedFile.Name,
+                    Tags = newTags,
                     FileBase64 = base64File,
                     FileName = selectedFile.Name
                 };
 
-            // Die POST-Anforderung mit den Dokumentdaten senden
-            var apiUrl = $"{ApiBaseUrl}documents";
+            var apiUrl = $"{ApiBaseUrl}/documents";
             var jsonContent = new StringContent(JsonSerializer.Serialize(documentModel), System.Text.Encoding.UTF8, "application/json");
             var response = await Http.PostAsync(apiUrl, jsonContent);
 
             if (response.IsSuccessStatusCode)
             {
-                // Lade die Dokumente neu, nachdem ein neues Dokument hinzugefügt wurde
                 await LoadDocuments();
-                newDocumentName = string.Empty;
+                newTags = string.Empty;
                 selectedFile = null;
             }
             else
@@ -213,7 +242,6 @@ else
         }
     }
 
-    // Asynchrone Methode für die Dateiauswahl
     private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
     {
         var file = e.File;
@@ -233,13 +261,15 @@ else
     {
         public Guid Id { get; set; }
         public string Name { get; set; }
+        public string Tags { get; set; } = string.Empty;
         public bool IsEditing { get; set; } = false;
-        public string? EditName { get; set; }
+        public string? EditTags { get; set; }
     }
 
     private class DocumentModel
     {
         public string Name { get; set; }
+        public string Tags { get; set; }
         public string FileBase64 { get; set; }
         public string FileName { get; set; }
     }
