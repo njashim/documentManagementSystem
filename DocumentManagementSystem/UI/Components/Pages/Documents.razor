@@ -1,7 +1,7 @@
 ﻿@page "/documents"
+@using System.Text.Json
+@inject HttpClient Http
 @attribute [StreamRendering]
-
-@inject IConfiguration Configuration
 
 <PageTitle>Documents</PageTitle>
 
@@ -20,6 +20,7 @@ else
             <tr>
                 <th>ID</th>
                 <th>Name</th>
+                <th>Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -28,6 +29,9 @@ else
                 <tr>
                     <td>@document.Id</td>
                     <td>@document.Name</td>
+                    <td>
+                        <button class="btn btn-danger" @onclick="() => DeleteDocument(document.Id)">Delete</button>
+                    </td>
                 </tr>
             }
         </tbody>
@@ -36,15 +40,53 @@ else
 
 @code {
     private Document[]? documents;
+    private const string ApiBaseUrl = "http://dms_api/";
 
     protected override async Task OnInitializedAsync()
     {
-        // Retrieve the API base URL from appsettings.Development.json or appsettings.Docker.json
-        string apiBaseUrl = Configuration["ApiSettings:ApiBaseUrl"];
+        await LoadDocuments();
+    }
 
-        // API call using the URL from appsettings.Development.json or appsettings.Docker.json
-        using var client = new HttpClient { BaseAddress = new Uri(apiBaseUrl) };
-        documents = await client.GetFromJsonAsync<Document[]>("documents");
+    private async Task LoadDocuments()
+    {
+        try
+        {
+            var apiUrl = $"{ApiBaseUrl}Documents";
+            var jsonResponse = await Http.GetStringAsync(apiUrl);
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+            using var jsonDoc = JsonDocument.Parse(jsonResponse);
+            var documentList = jsonDoc.RootElement.Deserialize<List<Document>>(options);
+
+            documents = documentList?.ToArray();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Fehler beim Laden der Dokumente: {ex.Message}");
+        }
+    }
+
+    private async Task DeleteDocument(Guid documentId)
+    {
+        try
+        {
+            var apiUrl = $"{ApiBaseUrl}Documents/{documentId}";
+            var response = await Http.DeleteAsync(apiUrl);
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Entferne das gelöschte Dokument aus der Liste
+                documents = documents?.Where(d => d.Id != documentId).ToArray();
+            }
+            else
+            {
+                Console.Error.WriteLine($"Fehler beim Löschen des Dokuments: {response.ReasonPhrase}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Fehler beim Löschen des Dokuments: {ex.Message}");
+        }
     }
 
     private class Document
