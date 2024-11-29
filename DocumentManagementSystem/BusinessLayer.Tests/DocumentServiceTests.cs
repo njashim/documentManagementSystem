@@ -88,8 +88,8 @@ namespace BusinessLayer.Tests
         {
             // Arrange
             var documentId = Guid.NewGuid();
-            var updatedModel = new DocumentModel { Id = documentId, Name = "Updated Name" };
-            var existingEntity = new Document { Id = documentId, Name = "Old Name" };
+            var updatedModel = new DocumentModel { Id = documentId, Name = "Name", Tags = "updated Tags" };
+            var existingEntity = new Document { Id = documentId, Name = "Name", Tags = "old Tags" };
 
             _repositoryMock.Setup(r => r.GetDocumentByIdAsync(documentId)).ReturnsAsync(existingEntity);
 

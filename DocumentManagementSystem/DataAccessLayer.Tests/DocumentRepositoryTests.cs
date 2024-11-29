@@ -38,7 +38,8 @@ namespace DataAccessLayer.Tests
             var document = new Document
             {
                 Id = Guid.NewGuid(),
-                Name = "Test Document"
+                Name = "Test Document",
+                Tags = "Test Tags"
             };
 
             // Act
@@ -55,8 +56,8 @@ namespace DataAccessLayer.Tests
             // Arrange
             var documents = new List<Document>
             {
-                new Document { Id = Guid.NewGuid(), Name = "Doc 1" },
-                new Document { Id = Guid.NewGuid(), Name = "Doc 2" }
+                new Document { Id = Guid.NewGuid(), Name = "Doc 1", Tags = "Tag 1" },
+                new Document { Id = Guid.NewGuid(), Name = "Doc 2", Tags = "Tag 2" }
             };
 
             _context.Documents.AddRange(documents);
@@ -77,7 +78,8 @@ namespace DataAccessLayer.Tests
             var document = new Document
             {
                 Id = Guid.NewGuid(),
-                Name = "Test Document"
+                Name = "Test Document",
+                Tags = "Test Tags"
             };
 
             _context.Documents.Add(document);
@@ -90,6 +92,7 @@ namespace DataAccessLayer.Tests
             Assert.That(result, Is.Not.Null);
             Assert.That(result.Id, Is.EqualTo(document.Id));
             Assert.That(result.Name, Is.EqualTo("Test Document"));
+            Assert.That(result.Tags, Is.EqualTo("Test Tags"));
         }
 
         [Test]
@@ -99,20 +102,21 @@ namespace DataAccessLayer.Tests
             var document = new Document
             {
                 Id = Guid.NewGuid(),
-                Name = "Old Name"
+                Name = "Name",
+                Tags = "old Tags"
             };
 
             _context.Documents.Add(document);
             await _context.SaveChangesAsync();
 
-            document.Name = "Updated Name";
+            document.Tags = "updated Tags";
 
             // Act
             await _repository.UpdateDocumentAsync(document);
 
             // Assert
             var updatedDocument = _context.Documents.First();
-            Assert.That(updatedDocument.Name, Is.EqualTo("Updated Name"));
+            Assert.That(updatedDocument.Tags, Is.EqualTo("updated Tags"));
         }
 
         [Test]
@@ -122,7 +126,8 @@ namespace DataAccessLayer.Tests
             var document = new Document
             {
                 Id = Guid.NewGuid(),
-                Name = "Test Document"
+                Name = "Test Document",
+                Tags = "Test Tags"
             };
 
             _context.Documents.Add(document);

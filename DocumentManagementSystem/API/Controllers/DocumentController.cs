@@ -1,10 +1,6 @@
 using BusinessLayer.Service.Interface;
 using Microsoft.AspNetCore.Mvc;
 using Model;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace API.Controllers
 {
@@ -26,6 +22,7 @@ namespace API.Controllers
         public async Task<IActionResult> GetDocuments()
         {
             var documents = await _documentService.GetDocumentsAsync();
+
             return Ok(documents);
         }
 
@@ -63,7 +60,7 @@ namespace API.Controllers
         {
             if (updatedDocumentModel == null || documentId != updatedDocumentModel.Id)
             {
-                return BadRequest("Invalid document data.");
+                return BadRequest("Document data is invalid.");
             }
 
             try
@@ -81,13 +78,6 @@ namespace API.Controllers
         [HttpDelete("{documentId}")]
         public async Task<IActionResult> DeleteDocument(Guid documentId)
         {
-            var document = await _documentService.GetDocumentByIdAsync(documentId);
-
-            if (document == null)
-            {
-                return NotFound($"Document with ID {documentId} not found.");
-            }
-
             await _documentService.DeleteDocumentAsync(documentId);
             return NoContent();
         }

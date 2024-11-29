@@ -9,7 +9,7 @@ services:
       - "8081:8081"
     environment:
       - ASPNETCORE_ENVIRONMENT=Docker
-      - ASPNETCORE_URLS=http://+:8081 
+      - ASPNETCORE_URLS=http://+:8081
       - ConnectionStrings__DefaultConnection=Host=dms_db;Port=5432;Username=postgres;Password=postgres;Database=dmsdb
     networks:
       - app-network
@@ -24,8 +24,7 @@ services:
       - "80:80"
     environment:
       - ASPNETCORE_ENVIRONMENT=Docker
-      - ASPNETCORE_URLS=http://+:80 
-      - API_URL=http://dms_api:8081/
+      - ASPNETCORE_URLS=http://+:80
     networks:
       - app-network
     depends_on:

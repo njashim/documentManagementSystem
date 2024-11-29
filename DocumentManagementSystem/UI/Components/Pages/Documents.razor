@@ -1,8 +1,8 @@
 ﻿@page "/documents"
-@using System.Text.Json
-@inject HttpClient Http
 @attribute [StreamRendering]
+
 @inject IConfiguration Configuration
+@inject HttpClient Http
 
 <PageTitle>Documents</PageTitle>
 
@@ -76,28 +76,29 @@ else
     </table>
 }
 
-<h3>Add New Document</h3>
+<h3>Upload Document</h3>
 <div class="input-container">
     <div class="form-group">
-        <label for="tagsInput">Tags:</label>
-        <input type="text" id="tagsInput" class="form-control" @bind="newTags" />
+        <label for="documentTags">Document Tags:</label>
+        <input type="text" id="documentTags" class="form-control" @bind="newDocumentTags" />
     </div>
     <div class="form-group">
         <label for="fileUpload">Upload File:</label>
-        <InputFile id="fileUpload" OnChange="OnFileSelectedAsync" />
+        <InputFile id="fileUpload" OnChange="OnFileSelectedAsync" @key="@fileInputKey" />
     </div>
     <button class="btn btn-primary" @onclick="SaveNewDocument">Save</button>
 </div>
 
 @code {
     private Document[]? documents;
-    private string ApiBaseUrl;  // Update with your actual API base URL
+    // Retrieve the API base URL from appsettings.Development.json or appsettings.Docker.json
+    private string ApiBaseUrl => Configuration["ApiSettings:ApiBaseUrl"];
+    private string newDocumentTags = string.Empty;
     private IBrowserFile? selectedFile;
-    private string newTags = string.Empty;
+    private string fileInputKey = Guid.NewGuid().ToString();
 
     protected override async Task OnInitializedAsync()
     {
-        ApiBaseUrl = Configuration["ApiSettings:ApiBaseUrl"];
         await LoadDocuments();
     }
 
@@ -105,19 +106,13 @@ else
     {
         try
         {
-            var apiUrl = $"{ApiBaseUrl}/documents";
-            var jsonResponse = await Http.GetStringAsync(apiUrl);
-
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-
-            using var jsonDoc = JsonDocument.Parse(jsonResponse);
-            var documentList = jsonDoc.RootElement.Deserialize<List<Document>>(options);
-
-            documents = documentList?.ToArray();
+            // Load all documents from the API
+            documents = await Http.GetFromJsonAsync<Document[]>($"{ApiBaseUrl}/documents");
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Fehler beim Laden der Dokumente: {ex.Message}");
+            Console.WriteLine($"Error loading documents: {ex.Message}");
+            documents = Array.Empty<Document>(); // Set empty list if API call fails
         }
     }
 
@@ -125,76 +120,70 @@ else
     {
         try
         {
-            var apiUrl = $"{ApiBaseUrl}/documents/{documentId}";
-            var response = await Http.DeleteAsync(apiUrl);
+            var response = await Http.DeleteAsync($"{ApiBaseUrl}/documents/{documentId}");
 
             if (response.IsSuccessStatusCode)
             {
-                documents = documents?.Where(d => d.Id != documentId).ToArray();
+                // Reload the documents after deletion
+                await LoadDocuments();
             }
             else
             {
-                Console.Error.WriteLine($"Fehler beim Löschen des Dokuments: {response.ReasonPhrase}");
+                Console.WriteLine($"Failed to delete document with ID {documentId}: {response.StatusCode}");
             }
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Fehler beim Löschen des Dokuments: {ex.Message}");
+            Console.WriteLine($"Error deleting document: {ex.Message}");
         }
     }
 
     private void EditDocument(Document document)
     {
-        // Setze IsEditing für das Dokument, das bearbeitet wird
         document.IsEditing = true;
-        document.EditTags = document.Tags;  // Lade den Tag des Dokumentes für Bearbeitung
+        document.EditTags = document.Tags;
     }
 
     private void CancelEdit(Document document)
     {
-        // Abbrechen und Editieren zurücksetzen
         document.IsEditing = false;
         document.EditTags = null;
     }
 
     private async Task SaveEdit(Document document)
     {
-        if (string.IsNullOrWhiteSpace(document.EditTags))
-        {
-            Console.Error.WriteLine("Tags dürfen nicht leer sein.");
-            return;
-        }
-
         try
         {
-            // JSON-Daten für das Update vorbereiten
-            var content = new StringContent(JsonSerializer.Serialize(new
+            if (string.IsNullOrWhiteSpace(document.EditTags))
             {
-                Id = document.Id,
-                Name = document.Name,  // Name bleibt unverändert
-                Tags = document.EditTags
-            }), System.Text.Encoding.UTF8, "application/json");
+                Console.WriteLine("Error: Document tags cannot be empty.");
+                return;
+            }
 
-            var apiUrl = $"{ApiBaseUrl}/documents/{document.Id}";
-            var response = await Http.PutAsync(apiUrl, content);
+            var updatedDocument = new Document
+                {
+                    Id = document.Id,
+                    Name = document.Name,
+                    Tags = document.EditTags
+                };
+
+            var response = await Http.PutAsJsonAsync($"{ApiBaseUrl}/documents/{document.Id}", updatedDocument);
 
             if (response.IsSuccessStatusCode)
             {
-                // Tags nach erfolgreichem Update speichern
+                // Apply the changes locally
                 document.Tags = document.EditTags;
                 document.IsEditing = false;
                 document.EditTags = null;
-                await LoadDocuments(); // Dokumente neu laden
             }
             else
             {
-                var errorDetails = await response.Content.ReadAsStringAsync();
-                Console.Error.WriteLine($"Fehler beim Aktualisieren des Dokuments: {response.ReasonPhrase} - Details: {errorDetails}");
+                Console.WriteLine($"Failed to update document with ID {document.Id}: {response.StatusCode}");
             }
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Fehler beim Aktualisieren des Dokuments: {ex.Message}");
+            Console.WriteLine($"Error saving document changes: {ex.Message}");
         }
     }
 
@@ -202,58 +191,66 @@ else
     {
         if (selectedFile == null)
         {
-            Console.Error.WriteLine("Bitte wählen Sie eine Datei aus.");
+            Console.WriteLine("Error: No file selected.");
             return;
         }
 
         try
         {
+            // Lesen der Datei und Konvertierung in Base64
             var fileBytes = new byte[selectedFile.Size];
             await selectedFile.OpenReadStream().ReadAsync(fileBytes);
             var base64File = Convert.ToBase64String(fileBytes);
 
-            var documentModel = new DocumentModel
-                {
-                    Name = selectedFile.Name,
-                    Tags = newTags,
-                    FileBase64 = base64File,
-                    FileName = selectedFile.Name
-                };
+            // Neues Dokument-Objekt vorbereiten
+            var newDocument = new
+            {
+                Name = selectedFile.Name,
+                Tags = newDocumentTags,
+                FileContent = base64File
 
-            var apiUrl = $"{ApiBaseUrl}/documents";
-            var jsonContent = new StringContent(JsonSerializer.Serialize(documentModel), System.Text.Encoding.UTF8, "application/json");
-            var response = await Http.PostAsync(apiUrl, jsonContent);
+            };
+
+            var response = await Http.PostAsJsonAsync($"{ApiBaseUrl}/documents", newDocument);
 
             if (response.IsSuccessStatusCode)
             {
-                await LoadDocuments();
-                newTags = string.Empty;
+                Console.WriteLine("Document saved successfully.");
+                newDocumentTags = string.Empty;
                 selectedFile = null;
+                fileInputKey = Guid.NewGuid().ToString(); // FileInput zurücksetzen
+                await LoadDocuments(); // Aktualisiert die Dokumentenliste
             }
             else
             {
-                var errorDetails = await response.Content.ReadAsStringAsync();
-                Console.Error.WriteLine($"Fehler beim Hochladen des Dokuments: {response.ReasonPhrase} - Details: {errorDetails}");
+                Console.WriteLine($"Failed to save document: {response.StatusCode}");
             }
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"Fehler beim Speichern des Dokuments: {ex.Message}");
+            Console.WriteLine($"Error saving document: {ex.Message}");
         }
     }
 
     private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
     {
-        var file = e.File;
+        try
+        {
+            // Get the first selected file
+            selectedFile = e.File;
 
-        if (file != null)
-        {
-            selectedFile = file;
-            Console.WriteLine($"Datei ausgewählt: {selectedFile.Name}, Größe: {selectedFile.Size}, Typ: {selectedFile.ContentType}");
+            if (selectedFile != null)
+            {
+                Console.WriteLine($"Selected file: {selectedFile.Name} ({selectedFile.Size} bytes)");
+            }
+            else
+            {
+                Console.WriteLine("No file selected.");
+            }
         }
-        else
+        catch (Exception ex)
         {
-            Console.WriteLine("Keine Datei ausgewählt oder ungültiger Dateityp.");
+            Console.WriteLine($"Error selecting file: {ex.Message}");
         }
     }
 
@@ -261,16 +258,9 @@ else
     {
         public Guid Id { get; set; }
         public string Name { get; set; }
-        public string Tags { get; set; } = string.Empty;
+        public string Tags { get; set; }
         public bool IsEditing { get; set; } = false;
         public string? EditTags { get; set; }
-    }
-
-    private class DocumentModel
-    {
-        public string Name { get; set; }
-        public string Tags { get; set; }
-        public string FileBase64 { get; set; }
-        public string FileName { get; set; }
+        public string FileContent { get; set; }
     }
 }
