@@ -11,10 +11,13 @@ services:
       - ASPNETCORE_ENVIRONMENT=Docker
       - ASPNETCORE_URLS=http://+:8081
       - ConnectionStrings__DefaultConnection=Host=dms_db;Port=5432;Username=postgres;Password=postgres;Database=dmsdb
+      - RABBITMQ__HOST=dms_rabbitmq
+      - RABBITMQ__QUEUE=ocr_queue
     networks:
       - app-network
     depends_on:
       - dms_db
+      - dms_rabbitmq
 
   dms_ui:
     build:
@@ -42,6 +45,17 @@ services:
       - app-network
     volumes:
       - dbdata:/var/lib/postgresql/data
+  
+  dms_rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672" 
+      - "9093:15672"
+    networks:
+      - app-network
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
 
 networks:
   app-network:
