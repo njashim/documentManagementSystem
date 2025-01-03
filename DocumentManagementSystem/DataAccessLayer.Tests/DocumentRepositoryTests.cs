@@ -3,6 +3,7 @@ using DataAccessLayer.Entity.Context;
 using DataAccessLayer.Repository;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace DataAccessLayer.Tests
@@ -12,6 +13,7 @@ namespace DataAccessLayer.Tests
     {
         private DMSContext _context;
         private DocumentRepository _repository;
+        private Mock<ILogger<DocumentRepository>> _mockLogger;
 
         [SetUp]
         public void SetUp()
@@ -22,7 +24,8 @@ namespace DataAccessLayer.Tests
 
             var mockConfiguration = new Mock<IConfiguration>();
             _context = new DMSContext(options, mockConfiguration.Object);
-            _repository = new DocumentRepository(_context);
+            _mockLogger = new Mock<ILogger<DocumentRepository>>();
+            _repository = new DocumentRepository(_context, _mockLogger.Object);
         }
 
         [TearDown]

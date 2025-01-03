@@ -1,7 +1,9 @@
 using AutoMapper;
 using BusinessLayer.Service;
+using BusinessLayer.Service.Interface;
 using DataAccessLayer.Entity;
 using DataAccessLayer.Repository.Interface;
+using Microsoft.Extensions.Logging;
 using Model;
 using Moq;
 
@@ -12,6 +14,8 @@ namespace BusinessLayer.Tests
     {
         private Mock<IMapper> _mapperMock;
         private Mock<IDocumentRepository> _repositoryMock;
+        private Mock<IRabbitMQService> _rabbitMQServiceMock;
+        private Mock<ILogger<DocumentService>> _loggerMock;
         private DocumentService _service;
 
         [SetUp]
@@ -19,7 +23,9 @@ namespace BusinessLayer.Tests
         {
             _mapperMock = new Mock<IMapper>();
             _repositoryMock = new Mock<IDocumentRepository>();
-            _service = new DocumentService(_repositoryMock.Object, _mapperMock.Object);
+            _rabbitMQServiceMock = new Mock<IRabbitMQService>();
+            _loggerMock = new Mock<ILogger<DocumentService>>();
+            _service = new DocumentService(_repositoryMock.Object, _mapperMock.Object, _rabbitMQServiceMock.Object, _loggerMock.Object);
         }
 
         [Test]
@@ -36,6 +42,21 @@ namespace BusinessLayer.Tests
             // Assert
             _mapperMock.Verify(m => m.Map<Document>(model), Times.Once);
             _repositoryMock.Verify(r => r.AddDocumentAsync(entity), Times.Once);
+        }
+
+        [Test]
+        public async Task AddDocumentAsync_ShouldSendMessageToQueue()
+        {
+            // Arrange
+            var model = new DocumentModel { Id = Guid.NewGuid(), Name = "Test Document" };
+            var entity = new Document { Id = model.Id, Name = model.Name };
+            _mapperMock.Setup(m => m.Map<Document>(model)).Returns(entity);
+
+            // Act
+            await _service.AddDocumentAsync(model);
+
+            // Assert
+            _rabbitMQServiceMock.Verify(rmq => rmq.SendMessage(It.IsAny<object>()), Times.Once);
         }
 
         [Test]

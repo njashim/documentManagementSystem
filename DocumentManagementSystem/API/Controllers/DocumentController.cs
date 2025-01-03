@@ -1,5 +1,4 @@
 using BusinessLayer.Service.Interface;
-using DocumentManagementSystem.Services;
 using Microsoft.AspNetCore.Mvc;
 using Model;
 
@@ -11,13 +10,11 @@ namespace API.Controllers
     {
         private readonly IDocumentService _documentService;
         private readonly ILogger<DocumentController> _logger;
-        private readonly RabbitMQService _rabbitMQService;
 
-        public DocumentController(IDocumentService documentService, ILogger<DocumentController> logger, RabbitMQService rabbitMQService)
+        public DocumentController(IDocumentService documentService, ILogger<DocumentController> logger)
         {
             _documentService = documentService;
             _logger = logger;
-            _rabbitMQService = rabbitMQService;
         }
 
         //GET/documents
@@ -26,7 +23,7 @@ namespace API.Controllers
         {
             var documents = await _documentService.GetDocumentsAsync();
 
-            _logger.LogWarning("GetDocument-Log: Get Documents");
+            _logger.LogInformation("GetDocuments-Log: GetDocuments used");
 
             return Ok(documents);
         }
@@ -36,10 +33,11 @@ namespace API.Controllers
         public async Task<IActionResult> GetDocumentById(Guid documentId)
         {
             var document = await _documentService.GetDocumentByIdAsync(documentId);
-            _logger.LogWarning("GetDocumentbyId Log: GetDocumentbyId used");
+            _logger.LogInformation("GetDocumentbyId-Log: GetDocumentbyId used");
 
             if (document == null)
             {
+                _logger.LogError($"GetDocumentbyId-Log: Document with ID {documentId} not found.");
                 return NotFound($"Document with ID {documentId} not found.");
             }
 
@@ -60,12 +58,11 @@ namespace API.Controllers
             {
                 _logger.LogInformation("UploadDocument: Storing document with ID {DocumentId}.", newDocumentModel.Id);
 
+                _logger.LogInformation("UploadDocument: Sending document with ID {DocumentId} to RabbitMQ.", newDocumentModel.Id);
+
                 await _documentService.AddDocumentAsync(newDocumentModel);
 
                 _logger.LogInformation("UploadDocument: Document with ID {DocumentId} stored successfully.", newDocumentModel.Id);
-
-                _logger.LogInformation("UploadDocument: Sending document with ID {DocumentId} to RabbitMQ.", newDocumentModel.Id);
-                _rabbitMQService.SendMessage(newDocumentModel);
 
                 _logger.LogInformation("UploadDocument: Document with ID {DocumentId} sent to RabbitMQ successfully.", newDocumentModel.Id);
 
@@ -83,10 +80,11 @@ namespace API.Controllers
         [HttpPut("{documentId}")]
         public async Task<IActionResult> UpdateDocument(Guid documentId, [FromBody] DocumentModel updatedDocumentModel)
         {
-            _logger.LogInformation("UpdateDocument Log: Startet");
+            _logger.LogInformation("UpdateDocument-Log: UpdateDocument used");
 
             if (updatedDocumentModel == null || documentId != updatedDocumentModel.Id)
             {
+                _logger.LogError("UpdateDocument-Log: Document data is invalid.");
                 return BadRequest("Document data is invalid.");
             }
 
@@ -97,6 +95,7 @@ namespace API.Controllers
             }
             catch (KeyNotFoundException)
             {
+                _logger.LogError($"UpdateDocument-Log: Document with ID {documentId} not found.");
                 return NotFound($"Document with ID {documentId} not found.");
             }
         }
@@ -105,8 +104,9 @@ namespace API.Controllers
         [HttpDelete("{documentId}")]
         public async Task<IActionResult> DeleteDocument(Guid documentId)
         {
-            _logger.LogInformation("DeleteDocument Log: Deleting Document");
+            _logger.LogInformation($"DeleteDocument-Log: Deleting Document with ID {documentId}.");
             await _documentService.DeleteDocumentAsync(documentId);
+            _logger.LogInformation($"DeleteDocument-Log: Deleted Document with ID {documentId}.");
             return NoContent();
         }
     }
