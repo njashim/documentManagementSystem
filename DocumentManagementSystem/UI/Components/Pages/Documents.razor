@@ -10,7 +10,7 @@
     .input-container {
         display: flex;
         align-items: center;
-        gap: 10px; 
+        gap: 10px;
     }
 
         .input-container .form-group {
@@ -19,7 +19,7 @@
         }
 
         .input-container button {
-            margin-left: 10px; 
+            margin-left: 10px;
         }
 </style>
 
@@ -39,6 +39,7 @@ else
                 <th>ID</th>
                 <th>Name</th>
                 <th>Tags</th>
+                <th>Content</th>
                 <th>Actions</th>
             </tr>
         </thead>
@@ -58,6 +59,7 @@ else
                             @document.Tags
                         }
                     </td>
+                    <td>@document.Content</td>
                     <td>
                         @if (document.IsEditing)
                         {
@@ -91,7 +93,6 @@ else
 
 @code {
     private Document[]? documents;
-    // Retrieve the API base URL from appsettings.Development.json or appsettings.Docker.json
     private string ApiBaseUrl => Configuration["ApiSettings:ApiBaseUrl"];
     private string newDocumentTags = string.Empty;
     private IBrowserFile? selectedFile;
@@ -106,7 +107,6 @@ else
     {
         try
         {
-            // Load all documents from the API
             documents = await Http.GetFromJsonAsync<Document[]>($"{ApiBaseUrl}/documents");
         }
         catch (Exception ex)
@@ -124,7 +124,6 @@ else
 
             if (response.IsSuccessStatusCode)
             {
-                // Reload the documents after deletion
                 await LoadDocuments();
             }
             else
@@ -171,7 +170,6 @@ else
 
             if (response.IsSuccessStatusCode)
             {
-                // Apply the changes locally
                 document.Tags = document.EditTags;
                 document.IsEditing = false;
                 document.EditTags = null;
@@ -197,21 +195,20 @@ else
 
         try
         {
-            // Lesen der Datei und Konvertierung in Base64
-            var fileBytes = new byte[selectedFile.Size];
-            await selectedFile.OpenReadStream().ReadAsync(fileBytes);
-            var base64File = Convert.ToBase64String(fileBytes);
+            var formData = new MultipartFormDataContent();
 
-            // Neues Dokument-Objekt vorbereiten
-            var newDocument = new
-            {
-                Name = selectedFile.Name,
-                Tags = newDocumentTags,
-                FileContent = base64File
+            // Dateiinhalt als Byte-Array in FormData hinzufügen
+            var fileContent = new StreamContent(selectedFile.OpenReadStream());
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(selectedFile.ContentType);
+            formData.Add(fileContent, "file", selectedFile.Name);
 
-            };
+            // Zusätzliche Felder korrekt hinzufügen
+            formData.Add(new StringContent(Guid.NewGuid().ToString()), "Id");
+            formData.Add(new StringContent(selectedFile.Name), "Name");
+            formData.Add(new StringContent(newDocumentTags ?? string.Empty), "Tags");
 
-            var response = await Http.PostAsJsonAsync($"{ApiBaseUrl}/documents", newDocument);
+            // API-Aufruf
+            var response = await Http.PostAsync($"{ApiBaseUrl}/documents", formData);
 
             if (response.IsSuccessStatusCode)
             {
@@ -219,11 +216,13 @@ else
                 newDocumentTags = string.Empty;
                 selectedFile = null;
                 fileInputKey = Guid.NewGuid().ToString(); // FileInput zurücksetzen
-                await LoadDocuments(); // Aktualisiert die Dokumentenliste
+                await LoadDocuments();
             }
             else
             {
                 Console.WriteLine($"Failed to save document: {response.StatusCode}");
+                var errorResponse = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"Error details: {errorResponse}");
             }
         }
         catch (Exception ex)
@@ -232,11 +231,15 @@ else
         }
     }
 
+
+
+
+
+
     private async Task OnFileSelectedAsync(InputFileChangeEventArgs e)
     {
         try
         {
-            // Get the first selected file
             selectedFile = e.File;
 
             if (selectedFile != null)
@@ -261,6 +264,6 @@ else
         public string Tags { get; set; }
         public bool IsEditing { get; set; } = false;
         public string? EditTags { get; set; }
-        public string FileContent { get; set; }
+        public byte[] Content { get; set; }
     }
 }

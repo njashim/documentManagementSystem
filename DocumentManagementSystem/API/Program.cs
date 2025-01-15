@@ -30,8 +30,17 @@ namespace API
             builder.Services.AddSingleton<IRabbitMQService, RabbitMQService>(serviceProvider =>
             {
                 var logger = serviceProvider.GetRequiredService<ILogger<RabbitMQService>>();
-                return new RabbitMQService("dms_rabbitmq", "document_queue", logger);
+
+                // Hier alle Parameter übergeben
+                string hostName = "dms_rabbitmq";
+                int port = 5672;  // Beispiel: Standardport von RabbitMQ
+                string userName = "guest";  // Standard-User
+                string password = "guest";  // Standard-Passwort
+                string queueName = "ocr_queue";
+
+                return new RabbitMQService(hostName, port, userName, password, queueName, logger);
             });
+
 
             var app = builder.Build();
 

@@ -13,8 +13,11 @@ namespace DataAccessLayer.Entity
         [MaxLength(100)]
         public string Name { get; set; }
 
-        [Required]
+        //[Required]
         [MaxLength(100)]
         public string Tags { get; set; }
+
+        [Required]
+        public byte[] Content { get; set; }
     }
 }

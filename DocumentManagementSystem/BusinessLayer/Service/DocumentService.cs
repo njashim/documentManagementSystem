@@ -22,15 +22,22 @@ namespace BusinessLayer.Service
             _logger = logger;
         }
 
-        public async Task AddDocumentAsync(DocumentModel newDocumentModel)
+        public async Task AddDocumentAsync(DocumentModel newDocumentModel, byte[] fileContent)
         {
             try
             {
                 _logger.LogInformation("Adding a new document with ID {DocumentId}.", newDocumentModel.Id);
+
+                // Mappe das DocumentModel auf ein Document-Entity
                 var document = _mapper.Map<Document>(newDocumentModel);
+
+                // Setze den Content im Document-Entity
+                document.Content = fileContent;  // Überprüfe, ob der Content hier korrekt gesetzt wird
+
+                // Speichere das Dokument in der Datenbank
                 await _documentRepository.AddDocumentAsync(document);
-                _rabbitMQService.SendMessage(newDocumentModel);
-                _logger.LogInformation("Document with ID {DocumentId} added successfully and message sent to RabbitMQ.", newDocumentModel.Id);
+
+                _logger.LogInformation("Document with ID {DocumentId} added successfully.", newDocumentModel.Id);
             }
             catch (Exception ex)
             {
@@ -38,6 +45,8 @@ namespace BusinessLayer.Service
                 throw;
             }
         }
+
+
 
         public async Task<List<DocumentModel>> GetDocumentsAsync()
         {

@@ -1,6 +1,8 @@
+using BusinessLayer.Service;
 using BusinessLayer.Service.Interface;
 using Microsoft.AspNetCore.Mvc;
 using Model;
+using System.Text;
 
 namespace API.Controllers
 {
@@ -10,11 +12,13 @@ namespace API.Controllers
     {
         private readonly IDocumentService _documentService;
         private readonly ILogger<DocumentController> _logger;
+        private readonly IRabbitMQService _rabbitMQService; // Füge dies hinzu
 
-        public DocumentController(IDocumentService documentService, ILogger<DocumentController> logger)
+        public DocumentController(IDocumentService documentService, ILogger<DocumentController> logger, IRabbitMQService rabbitMQService)
         {
             _documentService = documentService;
             _logger = logger;
+            _rabbitMQService = rabbitMQService; // Speichere es als private Instanzvariable
         }
 
         //GET/documents
@@ -43,38 +47,75 @@ namespace API.Controllers
 
             return Ok(document);
         }
-
-        //POST/documents
         [HttpPost]
-        public async Task<IActionResult> UploadDocument([FromBody] DocumentModel newDocumentModel)
+        public async Task<IActionResult> UploadDocument([FromForm] DocumentModel newDocumentModel, [FromForm] IFormFile file)
         {
             if (newDocumentModel == null)
             {
-                _logger.LogWarning("UploadDocument: Received null document data.");
-                return BadRequest("Document data is null.");
+                _logger.LogWarning("UploadDocument: Missing document data.");
+                return BadRequest(new { error = "Document data is missing." });
+            }
+
+            if (file == null)
+            {
+                _logger.LogWarning("UploadDocument: Missing file.");
+                return BadRequest(new { error = "File is missing." });
             }
 
             try
             {
-                _logger.LogInformation("UploadDocument: Storing document with ID {DocumentId}.", newDocumentModel.Id);
+                _logger.LogInformation("Uploading document: {Name}", newDocumentModel.Name);
 
-                _logger.LogInformation("UploadDocument: Sending document with ID {DocumentId} to RabbitMQ.", newDocumentModel.Id);
+                // Dateiinhalt als Byte-Array auslesen
+                using var memoryStream = new MemoryStream();
+                await file.CopyToAsync(memoryStream);
+                byte[] contentBytes = memoryStream.ToArray();
 
-                await _documentService.AddDocumentAsync(newDocumentModel);
+                // Überprüfen, ob der Dateiinhalt korrekt ist
+                if (contentBytes == null || contentBytes.Length == 0)
+                {
+                    _logger.LogWarning("UploadDocument: Empty file content.");
+                    return BadRequest(new { error = "File content is empty." });
+                }
 
-                _logger.LogInformation("UploadDocument: Document with ID {DocumentId} stored successfully.", newDocumentModel.Id);
+                // Content direkt setzen
+                newDocumentModel.Content = contentBytes;
 
-                _logger.LogInformation("UploadDocument: Document with ID {DocumentId} sent to RabbitMQ successfully.", newDocumentModel.Id);
+                // Logge die Länge des Inhalts
+                _logger.LogInformation("Content set. Length of content: {Length}", newDocumentModel.Content.Length);
+
+                // Dokument speichern
+                await _documentService.AddDocumentAsync(newDocumentModel, newDocumentModel.Content);
+
+                _logger.LogInformation("Document uploaded successfully: {Name}", newDocumentModel.Name);
+
+                // Nachricht an RabbitMQ senden
+                var message = new { DocumentId = newDocumentModel.Id, FileName = file.FileName };
+                await _rabbitMQService.SendMessageAsync("documents.queue", message);
 
                 return CreatedAtAction(nameof(GetDocumentById), new { documentId = newDocumentModel.Id }, newDocumentModel);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "UploadDocument: An error occurred while uploading the document with ID {DocumentId}.", newDocumentModel.Id);
-
+                _logger.LogError(ex, "Error occurred while uploading document.");
                 return StatusCode(500, "An error occurred while uploading the document.");
             }
         }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         //PUT/documents/{documentId}
         [HttpPut("{documentId}")]

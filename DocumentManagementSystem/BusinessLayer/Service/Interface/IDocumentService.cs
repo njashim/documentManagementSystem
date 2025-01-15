@@ -4,7 +4,7 @@ namespace BusinessLayer.Service.Interface
 {
     public interface IDocumentService
     {
-        Task AddDocumentAsync(DocumentModel newDocumentModel);
+        Task AddDocumentAsync(DocumentModel newDocumentModel, byte[] fileContent);
 
         Task<List<DocumentModel>> GetDocumentsAsync();
 

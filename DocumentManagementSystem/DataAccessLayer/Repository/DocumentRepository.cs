@@ -17,13 +17,17 @@ namespace DataAccessLayer.Repository
             _logger = logger;
         }
 
+        // Methode zum Hinzufügen eines neuen Dokuments
         public async Task AddDocumentAsync(Document newDocument)
         {
             try
             {
                 _logger.LogInformation("Adding a new document with ID {DocumentId}.", newDocument.Id);
+
+                // Dokument in der Datenbank speichern
                 _context.Documents.Add(newDocument);
                 await _context.SaveChangesAsync();
+
                 _logger.LogInformation("Document with ID {DocumentId} added successfully.", newDocument.Id);
             }
             catch (Exception ex)
@@ -33,6 +37,7 @@ namespace DataAccessLayer.Repository
             }
         }
 
+        // Methode zum Abrufen aller Dokumente
         public async Task<List<Document>> GetDocumentsAsync()
         {
             try
@@ -49,6 +54,7 @@ namespace DataAccessLayer.Repository
             }
         }
 
+        // Methode zum Abrufen eines Dokuments anhand der ID
         public async Task<Document> GetDocumentByIdAsync(Guid documentId)
         {
             try
@@ -72,13 +78,17 @@ namespace DataAccessLayer.Repository
             }
         }
 
+        // Methode zum Aktualisieren eines Dokuments
         public async Task UpdateDocumentAsync(Document updatedDocument)
         {
             try
             {
                 _logger.LogInformation("Updating document with ID {DocumentId}.", updatedDocument.Id);
+
+                // Dokument in der Datenbank aktualisieren
                 _context.Documents.Update(updatedDocument);
                 await _context.SaveChangesAsync();
+
                 _logger.LogInformation("Document with ID {DocumentId} updated successfully.", updatedDocument.Id);
             }
             catch (Exception ex)
@@ -88,14 +98,16 @@ namespace DataAccessLayer.Repository
             }
         }
 
+        // Methode zum Löschen eines Dokuments
         public async Task DeleteDocumentAsync(Guid documentId)
         {
             try
             {
-                _logger.LogInformation("Attempting to delete document with ID {DocumentId}.", documentId);
+                _logger.LogInformation($"Attempting to delete document with ID {documentId}.");
                 var document = await _context.Documents.FindAsync(documentId);
                 if (document != null)
                 {
+                    // Dokument aus der Datenbank entfernen
                     _context.Documents.Remove(document);
                     await _context.SaveChangesAsync();
                     _logger.LogInformation("Document with ID {DocumentId} deleted successfully.", documentId);

@@ -1,4 +1,7 @@
-﻿namespace Model
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+using System.Text.Json.Serialization;
+
+namespace Model
 {
     public class DocumentModel
     {
@@ -7,6 +10,8 @@
         public string Name { get; set; }
 
         public string Tags { get; set; }
+
+        public byte[] Content { get; set; }
 
         //public string Content { get; set; }
 

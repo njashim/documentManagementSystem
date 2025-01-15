@@ -1,4 +1,4 @@
-#version: '3.8'
+version: '3.8'
 
 services:
   dms_api:
@@ -56,6 +56,26 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
+
+  dms_ocr:
+    build:
+      context: .
+      dockerfile: DocumentManagementSystem/OcrWorkerService/Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
+      - ASPNETCORE_URLS=http://+:8082
+      - RabbitMQ__Host=dms_rabbitmq
+      - RabbitMQ__Port=5672
+      - RabbitMQ__Username=guest
+      - RabbitMQ__Password=guest
+      - RabbitMQ__QueueName=ocr_queue
+    entrypoint: ["sh", "-c", "sleep 15 && dotnet OcrWorkerService.dll"]
+    networks:
+      - app-network
+    depends_on:
+      - dms_rabbitmq
 
 networks:
   app-network:
