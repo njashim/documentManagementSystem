@@ -1,57 +1,109 @@
 using BusinessLayer.Service;
 using Tesseract;
 using PdfiumViewer;
-using System.Drawing.Imaging;
-using System.IO;
 using DataAccessLayer.Entity;
 using Newtonsoft.Json;
+using DataAccessLayer.Repository.Interface;
 
 namespace OcrWorkerService
 {
     public class Worker : BackgroundService
     {
         private readonly ILogger<Worker> _logger;
-        private readonly RabbitMQService _rabbitMQService; // Nutze den RabbitMQService aus dem Business Layer
+        private readonly RabbitMQService _rabbitMQService;
+        private readonly IDocumentRepository _documentRepository;
 
-        public Worker(ILogger<Worker> logger, RabbitMQService rabbitMQService)
+        public Worker(ILogger<Worker> logger, RabbitMQService rabbitMQService, IDocumentRepository documentRepository)
         {
             _logger = logger;
             _rabbitMQService = rabbitMQService;
+            _documentRepository = documentRepository;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             _logger.LogInformation("OCR Worker started.");
 
+            _rabbitMQService.InitializeRabbitMQQueue();
+
             await _rabbitMQService.ListenAsync("ocr_queue", async (message) =>
             {
                 _logger.LogInformation($"Received message: {message}");
 
-                // Deserialisiere die Nachricht in das Document-Objekt
-                var documentMessage = JsonConvert.DeserializeObject<Document>(message);
+                try
+                {
+                    var documentMessage = JsonConvert.DeserializeObject<DocumentMessage>(message);
 
-                // Extrahiere den byte[]-Inhalt der PDF-Datei aus der Nachricht
-                var pdfContent = documentMessage.Content; // Angenommen, der Inhalt ist als byte[] gespeichert
+                    if (documentMessage == null || documentMessage.Id == Guid.Empty)
+                    {
+                        _logger.LogError("Invalid message format or missing ID: {Message}", message);
+                        return;
+                    }
 
-                // OCR-Verarbeitung für das Dokument
-                var ocrText = await ProcessDocumentAsync(documentMessage.Id, pdfContent);
+                    if (string.IsNullOrEmpty(documentMessage.Name))
+                    {
+                        _logger.LogError("Document name is missing in message: {Message}", message);
+                        return;
+                    }
 
-                _logger.LogInformation($"Processed OCR for Document ID: {documentMessage.Id}");
-                await _rabbitMQService.SendMessageAsync("ocr_result_queue", ocrText);
+                    if (documentMessage.Content == null || documentMessage.Content.Length == 0)
+                    {
+                        _logger.LogError("Document content is missing or empty: {Message}", message);
+                        return;
+                    }
+
+                    _logger.LogInformation("Processing document ID: {DocumentId}, Name: {DocumentName}", documentMessage.Id, documentMessage.Name);
+
+                    // OCR-Verarbeitung starten
+                    var ocrText = await ProcessDocumentAsync(documentMessage.Id, documentMessage.Content);
+
+                    _logger.LogInformation($"OCR Result for Document ID {documentMessage.Id}: {ocrText}");
+
+                    // Ergebnis in die Ergebnisse-Queue senden
+                    await _rabbitMQService.SendMessageAsync("ocr_results_queue", ocrText);
+                }
+                catch (JsonException jsonEx)
+                {
+                    _logger.LogError(jsonEx, "JSON deserialization failed for message: {Message}", message);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Unexpected error while processing the message.");
+                }
             });
+
+            await Task.Delay(Timeout.Infinite, stoppingToken);
         }
 
         private async Task<string> ProcessDocumentAsync(Guid documentId, byte[] pdfContent)
         {
-            // Speichere die PDF-Datei temporär, um sie in ein Bild umzuwandeln
             var tempPdfFilePath = Path.Combine(Path.GetTempPath(), $"{documentId}.pdf");
             await File.WriteAllBytesAsync(tempPdfFilePath, pdfContent);
 
-            // PDF in Bild umwandeln
+            if (!File.Exists(tempPdfFilePath))
+            {
+                _logger.LogError("Failed to save PDF file for Document ID: {DocumentId}", documentId);
+                return string.Empty;
+            }
+
+            _logger.LogInformation("PDF saved successfully: {PdfFilePath}", tempPdfFilePath);
+
             var imagePath = ConvertPdfToImage(tempPdfFilePath);
 
-            // OCR mit Tesseract durchführen
+            if (!File.Exists(imagePath))
+            {
+                _logger.LogError("PDF-to-Image conversion failed for Document ID: {DocumentId}", documentId);
+                return string.Empty;
+            }
+
+            _logger.LogInformation("Image conversion successful: {ImagePath}", imagePath);
+
             var extractedText = PerformOcr(imagePath);
+
+            if (string.IsNullOrWhiteSpace(extractedText))
+            {
+                _logger.LogWarning("OCR extraction returned empty text for Document ID: {DocumentId}", documentId);
+            }
 
             return extractedText;
         }
@@ -62,9 +114,8 @@ namespace OcrWorkerService
 
             using (var pdfDocument = PdfDocument.Load(pdfFilePath))
             {
-                // Die erste Seite in ein Bild umwandeln
-                var firstPageImage = pdfDocument.Render(0, 300, 300, true); // Seite 0, mit 300 DPI
-                firstPageImage.Save(imagePath, System.Drawing.Imaging.ImageFormat.Png); // Verwende ImageFormat.Png aus System.Drawing.Imaging
+                var firstPageImage = pdfDocument.Render(0, 300, 300, true);
+                firstPageImage.Save(imagePath, System.Drawing.Imaging.ImageFormat.Png);
             }
 
             return imagePath;
@@ -72,7 +123,6 @@ namespace OcrWorkerService
 
         private string PerformOcr(string imagePath)
         {
-            // OCR mit Tesseract durchführen
             using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
             {
                 using (var img = Pix.LoadFromFile(imagePath))
@@ -82,5 +132,17 @@ namespace OcrWorkerService
                 }
             }
         }
+    }
+
+    public class DocumentMessage
+    {
+        [JsonProperty("DocumentId")]
+        public Guid Id { get; set; }
+
+        [JsonProperty("FileName")]
+        public string Name { get; set; }
+
+        [JsonProperty("Content")]
+        public byte[] Content { get; set; }
     }
 }

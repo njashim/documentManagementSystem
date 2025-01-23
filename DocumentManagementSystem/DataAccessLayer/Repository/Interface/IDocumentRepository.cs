@@ -13,5 +13,7 @@ namespace DataAccessLayer.Repository.Interface
         Task UpdateDocumentAsync(Document updatedDocument);
 
         Task DeleteDocumentAsync(Guid documentId);
+
+        Task<byte[]> GetDocumentContentAsync(Guid documentId);
     }
 }

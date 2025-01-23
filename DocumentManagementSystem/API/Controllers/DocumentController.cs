@@ -91,7 +91,7 @@ namespace API.Controllers
 
                 // Nachricht an RabbitMQ senden
                 var message = new { DocumentId = newDocumentModel.Id, FileName = file.FileName };
-                await _rabbitMQService.SendMessageAsync("documents.queue", message);
+                await _rabbitMQService.SendMessageAsync("ocr_queue", message);
 
                 return CreatedAtAction(nameof(GetDocumentById), new { documentId = newDocumentModel.Id }, newDocumentModel);
             }

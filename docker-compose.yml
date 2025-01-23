@@ -1,4 +1,4 @@
-version: '3.8'
+#version: '3.8'
 
 services:
   dms_api:
@@ -71,7 +71,7 @@ services:
       - RabbitMQ__Username=guest
       - RabbitMQ__Password=guest
       - RabbitMQ__QueueName=ocr_queue
-    entrypoint: ["sh", "-c", "sleep 15 && dotnet OcrWorkerService.dll"]
+    entrypoint: ["sh", "-c", "sleep 25 && dotnet OcrWorkerService.dll"]
     networks:
       - app-network
     depends_on:

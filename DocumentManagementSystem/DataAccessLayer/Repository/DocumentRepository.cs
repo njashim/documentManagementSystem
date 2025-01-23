@@ -123,5 +123,20 @@ namespace DataAccessLayer.Repository
                 throw;
             }
         }
+
+        public async Task<byte[]> GetDocumentContentAsync(Guid documentId)
+        {
+            var document = await _context.Documents
+                .Where(d => d.Id == documentId)
+                .Select(d => d.Content)
+                .FirstOrDefaultAsync();
+
+            if (document == null)
+            {
+                throw new KeyNotFoundException($"Document with ID {documentId} not found.");
+            }
+
+            return document;
+        }
     }
 }

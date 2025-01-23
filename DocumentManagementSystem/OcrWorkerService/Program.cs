@@ -1,14 +1,25 @@
 using BusinessLayer.Service;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using DataAccessLayer.Repository.Interface;
+using DataAccessLayer.Repository;
 using OcrWorkerService;
+using DataAccessLayer.Entity.Context;
+using Microsoft.EntityFrameworkCore;
 
 var host = Host.CreateDefaultBuilder(args)
     .ConfigureServices((hostContext, services) =>
     {
         // Konfiguration für RabbitMQ aus appsettings.json laden
         var configuration = hostContext.Configuration;
+
+        // PostgreSQL-Datenbankverbindung einrichten
+        var connectionString = configuration.GetConnectionString("DMSDBConnection");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new ArgumentException("Database connection string is not configured.");
+        }
+
+        services.AddDbContext<DMSContext>(options =>
+            options.UseNpgsql(connectionString));
 
         // Einzelne Parameter für RabbitMQ auslesen
         var rabbitMqHost = configuration["RabbitMQ:Host"];
@@ -30,6 +41,8 @@ var host = Host.CreateDefaultBuilder(args)
 
         // RabbitMQ ConnectionString dynamisch erstellen
         var rabbitMqConnectionString = $"amqp://{rabbitMqUsername}:{rabbitMqPassword}@{rabbitMqHost}:{rabbitMqPort}/";
+
+        services.AddScoped<IDocumentRepository, DocumentRepository>();
 
         // RabbitMQService registrieren
         services.AddSingleton<RabbitMQService>(serviceProvider =>

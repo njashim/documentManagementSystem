@@ -186,7 +186,8 @@ namespace BusinessLayer.Service
                                      autoAck: true,
                                      consumer: consumer);
 
-                await Task.Delay(-1); // Keep the listener alive
+                // Warte im Hintergrund, damit der Listener weiterhin Nachrichten empfängt
+                await Task.Delay(Timeout.Infinite);
             }
             catch (Exception ex)
             {
