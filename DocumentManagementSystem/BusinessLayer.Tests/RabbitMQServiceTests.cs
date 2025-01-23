@@ -1,104 +1,108 @@
-using BusinessLayer.Service;
-using BusinessLayer.Service.Interface;
-using Moq;
-using RabbitMQ.Client;
-using System.Text;
-using System.Text.Json;
+//using BusinessLayer.Service;
+//using BusinessLayer.Service.Interface;
+//using Microsoft.Extensions.Logging;
+//using Moq;
+//using RabbitMQ.Client;
+//using System.Text;
+//using System.Text.Json;
 
-namespace BusinessLayer.Tests
-{
-    [TestFixture]
-    public class RabbitMQServiceTests
-    {
-        //TODO - Test funktionieren noch nicht
+//namespace BusinessLayer.Tests
+//{
+//    [TestFixture]
+//    public class RabbitMQServiceTests
+//    {
 
-        //private Mock<IRabbitMQService> _rabbitMQServiceMock;
-        //private RabbitMQService _rabbitMQService;
-        //private Mock<IModel> _channelMock;
-        //private Mock<IConnection> _connectionMock;
-        //private Mock<ConnectionFactory> _connectionFactoryMock;
+//        private Mock<IRabbitMQService> _rabbitMQServiceMock;
+//        private RabbitMQService _rabbitMQService;
+//        private Mock<IModel> _channelMock;
+//        private Mock<IConnection> _connectionMock;
+//        private Mock<ConnectionFactory> _connectionFactoryMock;
 
-        //[SetUp]
-        //public void SetUp()
-        //{
-        //    // Arrange
-        //    _rabbitMQServiceMock = new Mock<IRabbitMQService>();
-        //    _connectionMock = new Mock<IConnection>();
-        //    _channelMock = new Mock<IModel>();
-        //    _connectionFactoryMock = new Mock<ConnectionFactory>();
+//        [SetUp]
+//        public void SetUp()
+//        {
+//            // Arrange
+//            _rabbitMQServiceMock = new Mock<IRabbitMQService>();
+//            _connectionMock = new Mock<IConnection>();
+//            _channelMock = new Mock<IModel>();
+//            _connectionFactoryMock = new Mock<ConnectionFactory>();
 
-        //    _rabbitMQService = new RabbitMQService("localhost", "test_queue");
-        //}
+//            // Erstelle einen Mock für den Logger
+//            var loggerMock = new Mock<ILogger<RabbitMQService>>();
 
-        //[Test]
-        //public void SendMessage_ShouldSendMessageToQueue()
-        //{
-        //    // Arrange
-        //    var message = new { Text = "Test Message" };
-        //    var messageJson = JsonSerializer.Serialize(message);
-        //    var body = Encoding.UTF8.GetBytes(messageJson);
+//            // Verwende den vollständigen Konstruktor mit allen erforderlichen Parametern
+//            _rabbitMQService = new RabbitMQService("localhost", 5672, "guest", "guest", "/", loggerMock.Object);
+//        }
 
-        //    _connectionMock.Setup(conn => conn.CreateModel()).Returns(_channelMock.Object);
-        //    _channelMock.Setup(channel => channel.QueueDeclare(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<IDictionary<string, object>>()));
+//        [Test]
+//        public void SendMessage_ShouldSendMessageToQueue()
+//        {
+//            // Arrange
+//            var message = new { Text = "Test Message" };
+//            var messageJson = JsonSerializer.Serialize(message);
+//            var body = Encoding.UTF8.GetBytes(messageJson);
 
-        //    // Act
-        //    _rabbitMQService.SendMessage(message);
+//            _connectionMock.Setup(conn => conn.CreateModel()).Returns(_channelMock.Object);
+//            _channelMock.Setup(channel => channel.QueueDeclare(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<IDictionary<string, object>>()));
 
-        //    // Assert
-        //    _channelMock.Verify(c => c.BasicPublish(
-        //        It.Is<string>(s => s == ""),
-        //        It.Is<string>(s => s == "test_queue"),
-        //        It.IsAny<IBasicProperties>(),
-        //        It.Is<byte[]>(b => b.Length > 0)),
-        //        Times.Once
-        //    );
-        //}
+//            // Act
+//            _rabbitMQService.SendMessage(message);
 
-        //[Test]
-        //public void SendMessage_ShouldHandleException_WhenConnectionFails()
-        //{
-        //    // Arrange
-        //    var message = new { Text = "Test Message" };
-        //    _connectionFactoryMock.Setup(factory => factory.CreateConnection()).Throws(new Exception("Connection failed"));
+//            // Assert
+//            _channelMock.Verify(c => c.BasicPublish(
+//                It.Is<string>(s => s == ""),
+//                It.Is<string>(s => s == "test_queue"),
+//                It.IsAny<IBasicProperties>(),
+//                It.Is<byte[]>(b => b.Length > 0)),
+//                Times.Once
+//            );
+//        }
 
-        //    // Act & Assert
-        //    var ex = Assert.Throws<Exception>(() => _rabbitMQService.SendMessage(message));
-        //    Assert.That(ex.Message, Is.EqualTo("Connection failed"));
-        //}
+//        [Test]
+//        public void SendMessage_ShouldHandleException_WhenConnectionFails()
+//        {
+//            // Arrange
+//            var message = new { Text = "Test Message" };
+//            _connectionFactoryMock.Setup(factory => factory.CreateConnection()).Throws(new Exception("Connection failed"));
 
-        //[Test]
-        //public void InitializeRabbitMQQueue_ShouldInitializeQueueSuccessfully()
-        //{
-        //    // Arrange
-        //    _connectionMock.Setup(conn => conn.CreateModel()).Returns(_channelMock.Object);
-        //    _channelMock.Setup(channel => channel.QueueDeclare(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<IDictionary<string, object>>()));
+//            // Act & Assert
+//            var ex = Assert.Throws<Exception>(() => _rabbitMQService.SendMessage(message));
+//            Assert.That(ex.Message, Is.EqualTo("Connection failed"));
+//        }
 
-        //    // Act
-        //    _rabbitMQService.InitializeRabbitMQQueue();
+//        [Test]
+//        public void InitializeRabbitMQQueue_ShouldInitializeQueueSuccessfully()
+//        {
+//            // Arrange
+//            _connectionMock.Setup(conn => conn.CreateModel()).Returns(_channelMock.Object);
+//            _channelMock.Setup(channel => channel.QueueDeclare(It.IsAny<string>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<bool>(), It.IsAny<IDictionary<string, object>>()));
 
-        //    // Assert
-        //    _channelMock.Verify(channel => channel.QueueDeclare(
-        //        It.Is<string>(s => s == "ocr_queue"),
-        //        It.IsAny<bool>(),
-        //        It.IsAny<bool>(),
-        //        It.IsAny<bool>(),
-        //        It.IsAny<IDictionary<string, object>>()
-        //    ), Times.Once);
-        //}
+//            // Act
+//            _rabbitMQService.InitializeRabbitMQQueue();
 
-        //[Test]
-        //public void InitializeRabbitMQQueue_ShouldRetryOnFailure()
-        //{
-        //    // Arrange
-        //    int retryCount = 0;
-        //    _connectionMock.Setup(conn => conn.CreateModel()).Throws(new Exception("Temporary failure"));
+//            // Assert
+//            _channelMock.Verify(channel => channel.QueueDeclare(
+//                It.Is<string>(s => s == "ocr_queue"),
+//                It.IsAny<bool>(),
+//                It.IsAny<bool>(),
+//                It.IsAny<bool>(),
+//                It.IsAny<IDictionary<string, object>>()
+//            ), Times.Once);
+//        }
 
-        //    // Act & Assert
-        //    var ex = Assert.Throws<Exception>(() => _rabbitMQService.InitializeRabbitMQQueue());
-        //    Assert.That(ex.Message, Is.EqualTo("Temporary failure"));
+//        [Test]
+//        public void InitializeRabbitMQQueue_ShouldRetryOnFailure()
+//        {
+//            // Arrange
+//            int retryCount = 0;
+//            _connectionMock.Setup(conn => conn.CreateModel()).Throws(new Exception("Temporary failure"));
 
-        //    // Ensure retry logic is tested (maximum 10 attempts)
-        //    _connectionMock.Verify(conn => conn.CreateModel(), Times.AtMost(10));
-        //}
-    }
-}
+//            // Act & Assert
+//            var ex = Assert.Throws<Exception>(() => _rabbitMQService.InitializeRabbitMQQueue());
+//            Assert.That(ex.Message, Is.EqualTo("Temporary failure"));
+
+//            // Ensure retry logic is tested (maximum 10 attempts)
+//            _connectionMock.Verify(conn => conn.CreateModel(), Times.AtMost(10));
+//        }
+//    }
+//}
